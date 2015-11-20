@@ -4,6 +4,7 @@
     <script type="text/javascript"
             src="http://www.airconsole.com/api/airconsole-1.2.js"></script>
     <script type="text/javascript" src="view_manager.js"></script>
+    <link rel="stylesheet" href="airconsole-controls-master/button/button.css">
     <script type="text/javascript">
     navigator.vibrate = (navigator.vibrate ||
                          navigator.webkitVibrate ||
@@ -32,9 +33,13 @@
         }
       }
       airconsole.onReady = function(code) {
-        var div = document.getElementById("player_id");
-        div.innerHTML = "You are Player " + airconsole.device_id;
-        ViewManager.show("view_start");
+        //var div = document.getElementById("player_id");
+        //div.innerHTML = "You are Player " + airconsole.device_id;
+        var div2 = document.getElementById("player1_id");
+        div2.innerHTML = "Player " + airconsole.device_id;
+        var div3 = document.getElementById("playerOther_id");
+        div3.innerHTML = "Player " + airconsole.device_id;
+        //ViewManager.show("view_start");
         //if (airconsole.device_id == 1) {
         //    ViewManager.show("view_start");
         //}
@@ -56,14 +61,27 @@
         _leftIsUp = isUp;
         _direction = (_leftIsUp ? 0 : -1) + (_rightIsUp ? 0 : 1);
         var direction = _direction;
-        airconsole.message(AirConsole.SCREEN, { setDirection: direction });
+        var message = {
+            'action': 'setDirection',
+            'info': { 'direction': direction }
+        };
+        airconsole.message(AirConsole.SCREEN, message/*{ setDirection: direction }*/);
     }
 
     function rightButtonChanged(isUp) {
         _rightIsUp = isUp;
         _direction = (_leftIsUp ? 0 : -1) + (_rightIsUp ? 0 : 1);
         var direction = _direction;
-        airconsole.message(AirConsole.SCREEN, { setDirection: direction });
+        var message = {
+            'action': 'setDirection',
+            'info': { 'direction': direction }
+        };
+        airconsole.message(AirConsole.SCREEN, message/*{ setDirection: direction }*/);
+    }
+
+    function rightButtonChanged1(isUp) {
+        var upOrDown = isUp ? "Up" : "Down";
+        airconsole.message(AirConsole.SCREEN, "Right button is " + upOrDown + " via mouse.");
     }
 
     function menuItemSelected(isPlayMode) {
@@ -162,6 +180,73 @@
             margin-top: -8px;
             color: #777;
         }
+
+        #player1_id {
+            position: absolute;
+            top: 2%;
+            left: 2%;
+            //width: 100%;
+            //margin-top: -8px;
+            color: white;
+        }
+
+        #playerOther_id {
+            position: absolute;
+            top: 2%;
+            left: 2%;
+            color: white;
+        }
+        
+        #left-button {
+            display: inline-block;
+            position: absolute;    
+            width: 40%;
+            height: 100%;
+            left: 0%;
+        }
+
+        #right-button {
+            display: inline-block;
+            position: absolute;    
+            width: 40%;
+            height: 100%;
+            right: 0%;
+        }  
+
+        #peasant-left-button {
+            display: inline-block;
+            position: absolute;    
+            width: 50%;
+            height: 100%;
+            left: 0%;
+        }
+
+        #peasant-right-button {
+            display: inline-block;
+            position: absolute;    
+            width: 50%;
+            height: 100%;
+            right: 0%;
+        }
+        
+        #select-button {
+            display: inline-block;
+            position: absolute;    
+            width: 20%;
+            height: 20%;
+            right: 40%;
+            top: 23%
+        }  
+        
+        #back-button {
+            display: inline-block;
+            position: absolute;    
+            width: 20%;
+            height: 20%;
+            right: 40%;
+            top: 57%
+        }   
+
     </style>
 </head>
 <!--<body onload="init()">-->
@@ -170,9 +255,19 @@
     <!--<div style="width: 1%"></div>-->
 
     <!--<div id="player_id"></div>-->
-    
-
-    <div id="view_ingame" class="view">    
+    <div id="view_start" class="view">
+        <div id ="player1_id"></div>
+        <span id="left-button" class=button-300-300><div class=button-text>Left</div></span>
+        <span id="select-button" class=button-80><div class=button-text>Select</div></span>
+        <span id="back-button" class=button-80><div class=button-text>Back</div></span>
+        <span id="right-button" class=button-300-300><div class=button-text>Right</div></span>
+    </div>
+    <div id="view_ingame" class="view">
+        <div id ="playerOther_id"></div>
+        <span id="peasant-left-button" class=button-300-300><div class=button-text>Left</div></span>
+        <span id="peasant-right-button" class=button-300-300><div class=button-text>Right</div></span>
+    </div>
+    <div id="view_ingame2" class="view">    
         <!--Your content here-->
         <div style="height: 1%"></div>
         <span class=button ontouchstart="leftButtonChanged(false)" ontouchend="leftButtonChanged(true)" onmousedown="leftButtonChanged(false)" onmouseup="leftButtonChanged(true)">
@@ -183,7 +278,7 @@
             <div class="button_label">Right</div>
         </span>
     </div> 
-    <div id="view_start" class="view">    
+    <div id="view_start3" class="view">    
         <!--Your other content here-->
         <span class=button ontouchend="menuItemSelected(true)" onmouseup="menuItemSelected(true)">
             <div class="button_label">Play</div>
@@ -213,5 +308,51 @@
         </span>
         <!--<div style="width: 8%"></div>-->
     </div>
+
+    <script type="text/javascript" src="airconsole-controls-master/button/button.js"></script>
+    <script type="text/javascript">
+      var left = new Button("left-button", {
+        "down": function() {
+            leftButtonChanged(false);
+        },
+        "up": function() {
+            leftButtonChanged(true);
+        }
+      });
+      var right = new Button("right-button", {
+        "down": function() {
+            rightButtonChanged(false);
+        },
+        "up": function() {
+            rightButtonChanged(true);
+        }
+      });
+      var select = new Button("select-button", {
+          "up": function () {
+              menuNavigationPressed("select");
+          }
+      });
+      var back = new Button("back-button", {
+          "up": function () {
+              menuNavigationPressed("back");
+          }
+      });
+      var peasantLeft = new Button("peasant-left-button", {
+          "down": function () {
+              leftButtonChanged(false);
+          },
+          "up": function () {
+              leftButtonChanged(true);
+          }
+      });
+      var peasantRight = new Button("peasant-right-button", {
+          "down": function () {
+              rightButtonChanged(false);
+          },
+          "up": function () {
+              rightButtonChanged(true);
+          }
+      });
+    </script>
 </body>
 </html>
