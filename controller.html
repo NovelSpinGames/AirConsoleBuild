@@ -2,7 +2,7 @@
 <html>
 <head>
     <script type="text/javascript"
-            src="http://www.airconsole.com/api/airconsole-1.2.js"></script>
+            src="http://www.airconsole.com/api/airconsole-1.3.0.js"></script>
     <script type="text/javascript" src="view_manager.js"></script>
     <link rel="stylesheet" href="airconsole-controls-master/button/button.css">
     <script type="text/javascript">
@@ -31,6 +31,7 @@
         else if (data.view) {
             ViewManager.show(data.view);
         }
+        airconsole.message(AirConsole.SCREEN, "Message received!");
       }
       airconsole.onReady = function(code) {
         //var div = document.getElementById("player_id");
