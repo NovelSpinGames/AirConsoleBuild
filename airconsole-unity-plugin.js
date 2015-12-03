@@ -4,10 +4,16 @@
 
 var isEditor = false;
 var isUnityReady = false;
-var wsPort;
 
-if (window.location.pathname.split('/')[1].indexOf("port") > -1) {
-    wsPort = window.location.pathname.split('/')[1].replace('port', '');
+function getURLParameterByName(name) {
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+var wsPort = getURLParameterByName("unity-editor-websocket-port");
+if (wsPort) {
     isEditor = true;
 }
 
@@ -18,7 +24,7 @@ if (window.location.pathname.split('/')[1].indexOf("port") > -1) {
 function App() {
 
     var me = this;
-    me.onReadyData = null;
+    me.queue = false;
 
     me.initEvents = function () {
         me.airconsole = new AirConsole({ "synchronize_time": true });
@@ -32,14 +38,14 @@ function App() {
         };
 
         me.airconsole.onReady = function (code) {
-            me.onReadyData = {
+            me.postToUnity({
                 "action": "onReady",
                 "code": code,
                 "device_id": me.airconsole.device_id,
                 "devices": me.airconsole.devices,
-                "server_time_offset": me.airconsole.server_time_offset
-            };
-            me.postToUnity(me.onReadyData);
+                "server_time_offset": me.airconsole.server_time_offset,
+                "location": document.location.href
+            });
         };
 
         me.airconsole.onDeviceStateChange = function (device_id, device_data) {
@@ -49,19 +55,40 @@ function App() {
                 "device_data": device_data
             });
         };
+        
+        me.airconsole.onConnect = function (device_id) {
+            me.postToUnity({
+                "action": "onConnect",
+                "device_id": device_id
+            });
+        };
+        
+        me.airconsole.onDisconnect = function (device_id) {
+            me.postToUnity({
+                "action": "onDisconnect",
+                "device_id": device_id
+            });
+        };
+        
+        me.airconsole.onCustomDeviceStateChange = function (device_id) {
+            me.postToUnity({
+                "action": "onCustomDeviceStateChange",
+                "device_id": device_id
+            });
+        };
     }
 
     if (isEditor) {
-        me.setupConnection = function (reconnect) {
+        me.setupConnection = function () {
 
             me.unity_socket = new WebSocket("ws://127.0.0.1:" + wsPort + "/api");
 
-            me.unity_socket.onopen = function (reconnect) {
-
+            me.unity_socket.onopen = function () {
+                isUnityReady = true;
                 if (me.airconsole == null) {
                     me.initEvents();
                 } else {
-                    me.postToUnity(me.onReadyData); // resend onReady event
+                    me.postQueue();
                 }
             };
 
@@ -70,11 +97,7 @@ function App() {
             };
 
             me.unity_socket.onclose = function () {
-                console.log('lost connection to unity');
-                window.setTimeout(function () {
-                    console.log('try to reconnect to unity');
-                    me.setupConnection(true);
-                }, 5000);
+                document.getElementById("editor-message").innerHTML = "<span style='font-size:32px'>Game <span style='color:red'>stopped</span> in Unity. Please close this tab.</span></span>";
             };
         };
 
@@ -85,16 +108,31 @@ function App() {
     }
 };
 
+App.prototype.postQueue = function () {
+    for (var i = 0; i < this.queue.length; ++i) {
+      this.postToUnity(this.queue[i]);
+	}
+	this.queue = false;
+}
+
 App.prototype.postToUnity = function (data) {
+    if (isUnityReady) {
+	    if (isEditor) {
+	        // send data over websocket
+	        this.unity_socket.send(JSON.stringify(data));
 
-    if (isEditor) {
-        // send data over websocket
-        this.unity_socket.send(JSON.stringify(data));
-
-    } else if (isUnityReady) {
-        // send data with SendMessage from Unity js library
-        SendMessage("AirConsole", "ProcessJS", JSON.stringify(data));
-    }
+	    } else {
+	        // send data with SendMessage from Unity js library
+	        SendMessage("AirConsole", "ProcessJS", JSON.stringify(data));
+	    }
+	} else {
+	    if (this.queue === false && data.action == "onReady") {
+		  this.queue = [];
+		}
+		if (this.queue !== false) {
+		  this.queue.push(data);
+		}
+	}
 };
 
 App.prototype.processUnityData = function (data) {
@@ -106,12 +144,16 @@ App.prototype.processUnityData = function (data) {
         this.airconsole.broadcast(data.data);
     } else if (data.action == "setCustomDeviceState") {
         this.airconsole.setCustomDeviceState(data.data);
+    } else if (data.action == "setCustomDeviceStateProperty") {
+        this.airconsole.setCustomDeviceStateProperty(data.key, data.value);
     } else if (data.action == "showDefaultUI") {
         this.airconsole.showDefaultUI(data.data);
     } else if (data.action == "navigateHome") {
         this.airconsole.navigateHome();
-    } else if (data.action == "loadScript") {
-        this.airconsole.loadScript(data.data);
+    } else if (data.action == "navigateTo") {
+        this.airconsole.navigateTo(data.data);
+    } else if (data.action == "setActivePlayers") {
+        this.airconsole.setActivePlayers(data.max_players);
     } else if (data.action == "debug") {
         console.log("debug message:", data.data);
     }
@@ -121,7 +163,7 @@ function onGameReady(autoScale) {
     isUnityReady = true;
 
     // send cached onRadyData
-    window.app.postToUnity(window.app.onReadyData);
+    window.app.postQueue();
 
     if (autoScale) {
         resizeCanvas();
@@ -149,13 +191,12 @@ function resizeCanvas() {
 /**
  * Run AirConsole
  */
-window.app = new App();
-
-if (isEditor) {
-    window.onload = function () {
-        document.body.innerHTML = "<div style=\"position:absolute; top:50%; left:50%; transform: translate(-50%, -50%); color:white;\">"
-            + "<h1>You can see your game scene in the Unity Editor.</h1>"
-            + "<h1>Keep this window open in the background.</h1>"
+ 
+function initAirConsole() {
+    window.app = new App();
+	if (isEditor) {
+        document.body.innerHTML = "<div style='position:absolute; top:50%; left:0%; width:100%; margin-top:-32px; color:white;'>"
+            + "<div id='editor-message' style='text-align:center; font-family: Arial'><div style='font-size:32px;'>You can see the game scene in the Unity Editor.</div><br>Keep this window open in the background.</div>"
             + "</div>";
-    }
+	}
 }

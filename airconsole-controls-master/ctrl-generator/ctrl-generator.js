@@ -7,6 +7,7 @@
 var CtrlGenerator = (function() {
   var id_counter = 0;
   var airconsole_obj = null;
+  var rate_limiter = null;
   var debug = false;
   var generated_config = {
     left: null,
@@ -155,8 +156,9 @@ var CtrlGenerator = (function() {
     var id = config.key || config.type.label.toLowerCase() + '-' + side_id;
 
     if (!params.onTouchCircle) {
+      // Only on touchend
       params.onTouchCircle = function(circle) {
-        sendInputEvent(id, true, circle);
+        //sendInputEvent(id, true, circle);
       }
     }
 
@@ -324,8 +326,8 @@ var CtrlGenerator = (function() {
    */
   function sendInputEvent(key, pressed, params) {
     params = params || {};
-    var message = {
-      key: key,
+    var message = {};
+    message[key] = {
       pressed: pressed,
       message: params
     };
@@ -336,7 +338,7 @@ var CtrlGenerator = (function() {
       if (debug) {
         console.info("Send", message);
       }
-      airconsole_obj.message(airconsole_obj.SCREEN, message);
+      rate_limiter.message(airconsole_obj.SCREEN, message);
     }
   }
 
@@ -366,6 +368,7 @@ var CtrlGenerator = (function() {
      */
     setAirConsole: function(airconsole) {
       airconsole_obj = airconsole;
+      rate_limiter = new RateLimiter(airconsole);
       return this;
     },
 
