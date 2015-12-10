@@ -8,96 +8,81 @@
     <link rel="stylesheet" href="TemplateData/style.css">
     <link rel="shortcut icon" href="TemplateData/favicon.ico" />
     <script src="TemplateData/UnityProgress.js"></script>
-    <script type="text/javascript" src="http://www.airconsole.com/api/airconsole-1.3.0.js"></script>
+    <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.3.0.js"></script>
     <script type="text/javascript" src="./airconsole-unity-plugin.js"></script>
+    <script type="text/javascript" src="https://code.createjs.com/tweenjs-0.6.0.min.js"></script>
+	  <script type="text/javascript" src="TemplateData/CSSPlugin.js"></script>
+    <!--
+      Unity WebGL Custom Progress Bar by Alexander Ocias
+      https://ocias.com/
+      https://ocias.com/blog/unity-webgl-custom-progress-bar/ 
+     -->
+     <style type=text/css>
+      div#loadingBox {
+        width: 100%;
+        height: 20px;
+        position: absolute;
+        top: 50%;
+        margin-top: -10px;
+        text-align: center;
+      }
+      
+      div#bgBar {
+        position: absolute;
+        width: 200px;
+        margin-left: -100px;
+        left: 50%;
+        height: 2px;
+        display: block;
+        background-color: #333;
+        border-radius: 2px;
+      }
+      
+      div#progressBar {
+      left: 50%;
+      position: absolute;
+      margin-left: -100px;
+      width: 0px;
+      height: 2px;
+      background-color: white;
+      border-radius: 2px;
+      }
+        
+      p#loadingInfo {
+      color: #666;
+      letter-spacing: 1px;
+      position: absolute;
+      width: 100%;
+      font-family: "Monaco", sans-serif;
+      text-transform: uppercase;
+      text-align: center;
+      font-size: 8px;
+      margin-top: 10px;
+      }
+    </style>
+    
   </head>
   <body class="template" onload="initAirConsole()">
     <div class="template-wrap clear">
     <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" height="600px" width="800px"></canvas>
+      <div id = "loadingBox">
+       <div id = "bgBar"></div>
+       <div id = "progressBar"></div>
+       <img id="spinner" src="TemplateData/gifLoader.gif" style="display: none; margin: 0 auto" />
+       <p id="loadingInfo">Loading...</p>
+     </div>
     </div>
     <script type='text/javascript'>
-  // connect to canvas
   var Module = {
     TOTAL_MEMORY: 268435456,
-    filePackagePrefixURL: "Release/",
-    memoryInitializerPrefixURL: "Release/",
-    preRun: [],
-    postRun: [],
-    print: (function() {
-      return function(text) {
-        console.log (text);
-      };
-    })(),
-    printErr: function(text) {
-      console.error (text);
-    },
-    canvas: document.getElementById('canvas'),
-    progress: null,
-    setStatus: function(text) {
-      if (this.progress == null) 
-      {
-        if (typeof UnityProgress != 'function')
-          return;
-        this.progress = new UnityProgress (canvas);
-      }
-      if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
-      if (text === Module.setStatus.text) return;
-      this.progress.SetMessage (text);
-      var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
-      if (m)
-        this.progress.SetProgress (parseInt(m[2])/parseInt(m[4]));
-      if (text === "") 
-        this.progress.Clear()
-    },
-    totalDependencies: 0,
-    monitorRunDependencies: function(left) {
-      this.totalDependencies = Math.max(this.totalDependencies, left);
-      Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
-    }
+    errorhandler: null,			// arguments: err, url, line. This function must return 'true' if the error is handled, otherwise 'false'
+    compatibilitycheck: null,
+    dataUrl: "Release/AirConsoleBuild.data",
+    codeUrl: "Release/AirConsoleBuild.js",
+    memUrl: "Release/AirConsoleBuild.mem",
   };
-  Module.setStatus('Downloading (0.0/1)');
 </script>
-<script src="Release/UnityConfig.js"></script>
-<script src="Release/fileloader.js"></script>
-<script>if (!(!Math.fround)) {
-  var script = document.createElement('script');
-  script.src = "Release/AirConsoleBuild.js";
-  document.body.appendChild(script);
-} else {
-  var codeXHR = new XMLHttpRequest();
-  codeXHR.open('GET', 'Release/AirConsoleBuild.js', true);
-  codeXHR.onload = function() {
-    var code = codeXHR.responseText;
-    if (!Math.fround) { 
-try {
-  console.log('optimizing out Math.fround calls');
-  var m = /var ([^=]+)=global\.Math\.fround;/.exec(code);
-  var minified = m[1];
-  if (!minified) throw 'fail';
-  var startAsm = code.indexOf('// EMSCRIPTEN_START_FUNCS');
-  var endAsm = code.indexOf('// EMSCRIPTEN_END_FUNCS');
-  var asm = code.substring(startAsm, endAsm);
-  do {
-    var moar = false; // we need to re-do, as x(x( will not be fixed
-    asm = asm.replace(new RegExp('[^a-zA-Z0-9\\$\\_]' + minified + '\\(', 'g'), function(s) { moar = true; return s[0] + '(' });
-  } while (moar);
-  code = code.substring(0, startAsm) + asm + code.substring(endAsm);
-  code = code.replace("'use asm'", "'almost asm'");
-} catch(e) { console.log('failed to optimize out Math.fround calls ' + e) }
- }
+<script src="Release/UnityLoader.js"></script>
 
-    var blob = new Blob([code], { type: 'text/javascript' });
-    codeXHR = null;
-    var src = URL.createObjectURL(blob);
-    var script = document.createElement('script');
-    script.src = URL.createObjectURL(blob);
-    script.onload = function() {
-      URL.revokeObjectURL(script.src);
-    };
-    document.body.appendChild(script);
-  };
-  codeXHR.send(null);
-}
-</script>
   </body>
 </html>
