@@ -22,7 +22,9 @@
     function init() {
       airconsole = new AirConsole({ "orientation": "landscape" });
       ViewManager.init();
-      ViewManager.show("view_ingame");
+      ViewManager.show("view_gameFull");
+      var div = document.getElementById("playerGameFull_id");
+      div.innerHTML = "Please wait";
       airconsole.onMessage = function(from, data) {
         if (from == AirConsole.SCREEN && data.vibrate) {
           navigator.vibrate(data.vibrate);
@@ -31,15 +33,30 @@
         else if (data.view) {
             ViewManager.show(data.view);
         }
+        if (data.playerNumber)
+        {
+            setPlayerNumber(data.playerNumber);
+        }
+        if (data.displayMessage)
+        {
+            var div2 = document.getElementById("playerGameFull_id");
+            div2.innerHTML = data.displayMessage;
+        }
+        if (data.color)
+        {
+            document.body.style.backgroundColor = data.color;
+        }
         airconsole.message(AirConsole.SCREEN, "Message received!");
       }
       airconsole.onReady = function(code) {
         //var div = document.getElementById("player_id");
-        //div.innerHTML = "You are Player " + airconsole.device_id;
-        var div2 = document.getElementById("player1_id");
-        div2.innerHTML = "Player " + airconsole.device_id;
-        var div3 = document.getElementById("playerOther_id");
-        div3.innerHTML = "Player " + airconsole.device_id;
+          //div.innerHTML = "You are Player " + airconsole.device_id;
+
+        //var div2 = document.getElementById("player1_id");
+        //div2.innerHTML = "Player " + airconsole.device_id;
+        //var div3 = document.getElementById("playerOther_id");
+        //div3.innerHTML = "Player " + airconsole.device_id;
+
         //ViewManager.show("view_start");
         //if (airconsole.device_id == 1) {
         //    ViewManager.show("view_start");
@@ -48,6 +65,14 @@
         //    ViewManager.show("view_ingame");
         //}
       }
+    }
+
+    function setPlayerNumber(number)
+    {
+        var div2 = document.getElementById("player1_id");
+        div2.innerHTML = "Player " + number;
+        var div3 = document.getElementById("playerOther_id");
+        div3.innerHTML = "Player " + number;
     }
 
     /**
@@ -188,13 +213,22 @@
             left: 2%;
             //width: 100%;
             //margin-top: -8px;
-            color: white;
+            color: black;
         }
 
         #playerOther_id {
             position: absolute;
             top: 2%;
             left: 2%;
+            color: black;
+        }
+
+        #playerGameFull_id {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            width: 100%;
+            margin-top: -8px;
             color: white;
         }
         
@@ -217,7 +251,7 @@
         #peasant-left-button {
             display: inline-block;
             position: absolute;    
-            width: 50%;
+            width: 45%;
             height: 100%;
             left: 0%;
         }
@@ -225,7 +259,7 @@
         #peasant-right-button {
             display: inline-block;
             position: absolute;    
-            width: 50%;
+            width: 45%;
             height: 100%;
             right: 0%;
         }
@@ -267,6 +301,9 @@
         <div id ="playerOther_id"></div>
         <span id="peasant-left-button" class=button-300-300><div class=button-text>Left</div></span>
         <span id="peasant-right-button" class=button-300-300><div class=button-text>Right</div></span>
+    </div>
+    <div id="view_gameFull" class="view">
+        <div id ="playerGameFull_id"></div>
     </div>
     <div id="view_ingame2" class="view">    
         <!--Your content here-->
